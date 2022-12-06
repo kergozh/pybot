@@ -48,10 +48,10 @@ class Mastobot:
         self._logger.info("init mastobot with access type " + access_type + " in " + hostname)
 
         match access_type:
-            case['AT']: 
+            case 'AT': 
                 self.access_token_access(self, hostname)
 
-            case['CR']:
+            case'CR':
                 self.credential_access(self, hostname)
 
             case _:
