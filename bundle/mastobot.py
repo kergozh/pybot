@@ -76,7 +76,7 @@ class Mastobot:
         self._logger.debug("credential access in " + hostname)
 
         force_login       = self._config.get("credentials.force_login")
-        secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("bot.secrets_file_path")
+        secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("credentials.secrets_file_path")
 
         self._logger.debug("force login      : " + str(force_login))
         self._logger.debug("secrets file path: " + secrets_file_path)
@@ -189,7 +189,7 @@ class Mastobot:
                 self._logger.info("log in succesful!")
                 logged_in = True
 
-            secrets_directory = self._config.get("bot.secrets_directory")
+            secrets_directory = self._config.get("credentials.secrets_directory")
             if not os.path.exists(secrets_directory):
                 os.makedirs(secrets_directory)
 
