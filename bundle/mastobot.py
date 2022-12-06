@@ -38,41 +38,66 @@ class AttribAccessDict(dict):
 
 class Mastobot:
 
-    # name = 'Mastobot'
-    # def __init__(self, mastodon=None, mastodon_hostname=None):
-
     def __init__(self, config: Config):
 
         self._config = config
         self._logger = logging.getLogger(self._config.get("logger.name"))
 
-        force_login       = self._config.get("bot.force_login")
-        secrets_file_path = self._config.get("bot.secrets_directory") + "/" + self._config.get("bot.secrets_file_path")
-        config_file_path  = self._config.get("bot.config_directory") + "/" + self._config.get("bot.config_file_path")
+        hostname    = self._config.get("bot.hostname")  
+        access_type = self._config.get("bot.access_type")  
+        self._logger.info("init mastobot with access type " + " in " + hostname)
 
-        self._logger.info("init mastobot with force log in a " + str(force_login))
+        match access_type:
+            case["AT"]: 
+                self.access_token_access(self, hostname)
+
+            case["CR"]:
+                self.credential_access(self, hostname)
+
+            case _:
+                self._logger.error("Access type not valid: " + access_type)
+                sys.exit(0)
+
+
+    @staticmethod
+    def access_token_access(self, hostname):
+
+        self._logger.debug("access token access in " + hostname)
+    
+        client_id = self._config.get("access_token.client_id")
+        secret    = self._config.get("access_token.client_id")
+        token     = self._config.get("access_token.client_id")
+        self.mastodon    = self.log_in(self, client_id, secret, token, hostname)    
+
+
+    @staticmethod
+    def credential_access(self, hostname):
+
+        self._logger.debug("credential access in " + hostname)
+
+        force_login       = self._config.get("credentials.force_login")
+        secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("bot.secrets_file_path")
+
+        self._logger.debug("force login      : " + str(force_login))
         self._logger.debug("secrets file path: " + secrets_file_path)
-        self._logger.debug("config file path : " + config_file_path)
+
+        is_setup = False
 
         if force_login:
             self.remove_file(self, secrets_file_path)     
-            self.remove_file(self, config_file_path)     
-            is_setup = False
         else:
             if self.check_file(self, secrets_file_path):
-                if self.check_file(self, config_file_path):
-                    is_setup = True
-                else:
-                    self.remove_file(self, secrets_file_path)
-                    is_setup = False
-            else:
-                is_setup = False        
+                is_setup = True
 
         if is_setup:
-            self.mastodon, self.mastodon_hostname = self.log_in(self, secrets_file_path, config_file_path)
+            client_id = self.get_parameter(self,"client_id",     secrets_file_path)
+            secret    = self.get_parameter(self,"secret", secrets_file_path)
+            token     = self.get_parameter(self,"token",  secrets_file_path)
+            self.mastodon    = self.log_in(self, client_id, secret, token, hostname)
+        
         else:
             while(True):
-                logged_in, self.mastodon, self.mastodon_hostname = self.setup(secrets_file_path, config_file_path)
+                logged_in, self.mastodon = self.setup(secrets_file_path, hostname)
 
                 if not logged_in:
                     self._logger.error("log in failed! Try again.")
@@ -103,26 +128,21 @@ class Mastobot:
 
 
     @staticmethod
-    def log_in(self, secrets_file_path, config_file_path):
+    def log_in(self, client_id, secret, token, hostname):
 
-        self._logger.debug("init log in.")
-
-        uc_client_id     = self.get_parameter(self,"uc_client_id",     secrets_file_path)
-        uc_client_secret = self.get_parameter(self,"uc_client_secret", secrets_file_path)
-        uc_access_token  = self.get_parameter(self,"uc_access_token",  secrets_file_path)
-
-        self.mastodon_hostname = self.get_parameter(self,"mastodon_hostname", config_file_path)
+        self._logger.debug("client id: " + client_id)
+        self._logger.debug("secret   : " + secret)
+        self._logger.debug("token    : " + token)
+        self._logger.debug("hostname : " + hostname)
 
         self.mastodon = Mastodon(
-            client_id = uc_client_id,
-            client_secret = uc_client_secret,
-            access_token = uc_access_token,
-            api_base_url = 'https://' + self.mastodon_hostname,
+            client_id = client_id,
+            client_secret = secret,
+            access_token = token,
+            api_base_url = 'https://' + hostname,
         )
 
-        headers={ 'Authorization': 'Bearer %s'%uc_access_token }
-
-        return (self.mastodon, self.mastodon_hostname)
+        return (self.mastodon)
 
 
     @staticmethod
@@ -135,6 +155,87 @@ class Mastobot:
 
         self._logger.error(file_path + " missing parameter " + parameter)
         sys.exit(0)
+
+
+    def setup(self, secrets_file_path, hostname):
+
+        self._logger.debug("mastobot setup")
+
+        logged_in = False
+
+        try:
+            user_name = input("Enter Mastodon login e-mail (or 'q' to exit): ")
+
+            if user_name == 'q':
+                sys.exit("Bye")
+
+            user_password = getpass.getpass("User password? ")
+            
+            app_name = self._config.get("bot.app_name")
+
+            Mastodon.create_app(app_name, scopes=["read","write"],
+                to_file="app_clientcred.txt", api_base_url=hostname)
+
+            mastodon = Mastodon(client_id = "app_clientcred.txt", api_base_url = hostname)
+
+            mastodon.log_in(
+                user_name,
+                user_password,
+                scopes = ["read", "write"],
+                to_file = "app_usercred.txt"
+            )
+
+            if os.path.isfile("app_usercred.txt"):
+                self._logger.info("log in succesful!")
+                logged_in = True
+
+            secrets_directory = self._config.get("bot.secrets_directory")
+            if not os.path.exists(secrets_directory):
+                os.makedirs(secrets_directory)
+
+            if not os.path.exists(secrets_file_path):
+                with open(secrets_file_path, 'w'): pass
+                self._logger.info(secrets_file_path + " created!")
+
+            with open(secrets_file_path, 'a') as the_file:
+                self._logger.info("writing secrets parameter names to " + secrets_file_path)
+                the_file.write('client_id: \n'+'secret: \n'+'token: \n')
+
+            client_path = 'app_clientcred.txt'
+
+            with open(client_path) as fp:
+
+                line = fp.readline()
+                cnt = 1
+
+                while line:
+                    if cnt == 1:
+                        self._logger.info("writing client id to " + secrets_file_path)
+                        self.modify_file(self, secrets_file_path, "client_id: ", value=line.rstrip())
+
+                    elif cnt == 2:
+                        self._logger.info("writing secret to " + secrets_file_path)
+                        self.modify_file(self, secrets_file_path, "secret: ", value=line.rstrip())
+
+                    line = fp.readline()
+                    cnt += 1
+
+            token_path = 'app_usercred.txt'
+
+            with open(token_path) as fp:
+                line = fp.readline()
+                self._logger.info("writing token to " + secrets_file_path)
+                self.modify_file(self, secrets_file_path, "token: ", value=line.rstrip())
+
+            self.remove_file(self, "app_clientcred.txt")     
+            self.remove_file(self, "app_usercred.txt")     
+
+            self._logger.info("secrets setup done!")
+
+        except Exception as e:
+            self._logger.exception(e)
+        
+        return (logged_in, mastodon)
 
 
     def get_mention(self, notif, keyword):
@@ -227,11 +328,11 @@ class Mastobot:
     def replay(self, mention, aux_text):
 
         post_text  = f"@{mention.username}{aux_text}"
-
         post_text = (post_text[:400] + '... ') if len(post_text) > 400 else post_text
 
         self._logger.debug("replaying notification " + str(mention.id) + " with\n" + post_text)
         self.mastodon.status_post(post_text, in_reply_to_id=mention.status_id,visibility=mention.visibility)
+
 
     @staticmethod
     def modify_file(self, file_name, pattern,value=""):
@@ -239,7 +340,6 @@ class Mastobot:
         fh=fileinput.input(file_name,inplace=True)
 
         for line in fh:
-
             replacement=pattern + value
             line=re.sub(pattern,replacement,line)
             sys.stdout.write(line)
@@ -247,105 +347,3 @@ class Mastobot:
         fh.close()
 
 
-    def setup(self, secrets_file_path, config_file_path):
-
-        self._logger.debug("init setup")
-
-        logged_in = False
-
-        try:
-
-            self.mastodon_hostname = input("Enter Mastodon hostname (or 'q' to exit): ")
-
-            if self.mastodon_hostname == 'q':
-
-                sys.exit("Bye")
-
-            user_name = input("User email, ex. user@" + self.mastodon_hostname +"? ")
-            user_password = getpass.getpass("User password? ")
-            
-            app_name = self._config.get("bot.app_name")
-
-            Mastodon.create_app(app_name, scopes=["read","write"],
-
-                    to_file="app_clientcred.txt", api_base_url=self.mastodon_hostname)
-
-            mastodon = Mastodon(client_id = "app_clientcred.txt", api_base_url = self.mastodon_hostname)
-
-            mastodon.log_in(
-                user_name,
-                user_password,
-                scopes = ["read", "write"],
-                to_file = "app_usercred.txt"
-            )
-
-            if os.path.isfile("app_usercred.txt"):
-
-                self._logger.info("log in succesful!")
-                logged_in = True
-
-            secrets_directory = self._config.get("bot.secrets_directory")
-            if not os.path.exists(secrets_directory):
-                os.makedirs(secrets_directory)
-
-            if not os.path.exists(secrets_file_path):
-                with open(secrets_file_path, 'w'): pass
-                self._logger.info(secrets_file_path + " created!")
-
-            with open(secrets_file_path, 'a') as the_file:
-                self._logger.info("writing secrets parameter names to " + secrets_file_path)
-                the_file.write('uc_client_id: \n'+'uc_client_secret: \n'+'uc_access_token: \n')
-
-            client_path = 'app_clientcred.txt'
-
-            with open(client_path) as fp:
-
-                line = fp.readline()
-                cnt = 1
-
-                while line:
-
-                    if cnt == 1:
-
-                        self._logger.info("writing client id to " + secrets_file_path)
-                        self.modify_file(self, secrets_file_path, "uc_client_id: ", value=line.rstrip())
-
-                    elif cnt == 2:
-
-                        self._logger.info("writing client secret to " + secrets_file_path)
-                        self.modify_file(self, secrets_file_path, "uc_client_secret: ", value=line.rstrip())
-
-                    line = fp.readline()
-                    cnt += 1
-
-            token_path = 'app_usercred.txt'
-
-            with open(token_path) as fp:
-
-                line = fp.readline()
-                self._logger.info("writing access token to " + secrets_file_path)
-                self.modify_file(self, secrets_file_path, "uc_access_token: ", value=line.rstrip())
-
-            self.remove_file(self, "app_clientcred.txt")     
-            self.remove_file(self, "app_usercred.txt")     
-
-            config_directory = self._config.get("bot.config_directory")
-            if not os.path.exists(config_directory):
-                os.makedirs(config_directory)
-
-            if not os.path.exists(config_file_path):
-                with open(config_file_path, 'w'): pass
-                self._logger.info(config_file_path + " created!")
-      
-            with open(config_file_path, 'a') as the_file:
-                the_file.write('mastodon_hostname: \n')
-                self._logger.info("adding parameter 'mastodon_hostname' to " + config_file_path)
-   
-            self.modify_file(self, config_file_path, "mastodon_hostname: ", value=self.mastodon_hostname)
-    
-            self._logger.info("secrets setup done!")
-
-        except Exception as e:
-            self._logger.exception(e)
-        
-        return (logged_in, mastodon, self.mastodon_hostname)
