@@ -230,7 +230,7 @@ class Mastobot:
 
         post_text = (post_text[:400] + '... ') if len(post_text) > 400 else post_text
 
-        self._logger.debug("replaying notification " + mention.id + " with\n" + post_text)
+        self._logger.debug("replaying notification " + str(mention.id) + " with\n" + post_text)
         self.mastodon.status_post(post_text, in_reply_to_id=mention.status_id,visibility=mention.visibility)
 
     @staticmethod
