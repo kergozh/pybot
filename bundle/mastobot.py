@@ -65,8 +65,8 @@ class Mastobot:
         self._logger.debug("access token access in " + hostname)
     
         client_id = self._config.get("access_token.client_id")
-        secret    = self._config.get("access_token.client_id")
-        token     = self._config.get("access_token.client_id")
+        secret    = self._config.get("access_token.secret")
+        token     = self._config.get("access_token.token")
         self.mastodon    = self.log_in(self, client_id, secret, token, hostname)    
 
 
