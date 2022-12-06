@@ -45,17 +45,17 @@ class Mastobot:
 
         hostname    = self._config.get("bot.hostname")  
         access_type = self._config.get("bot.access_type")  
-        self._logger.info("init mastobot with access type " + " in " + hostname)
+        self._logger.info("init mastobot with access type " + access_type + " in " + hostname)
 
         match access_type:
-            case["AT"]: 
+            case['AT']: 
                 self.access_token_access(self, hostname)
 
-            case["CR"]:
+            case['CR']:
                 self.credential_access(self, hostname)
 
             case _:
-                self._logger.error("Access type not valid: " + access_type)
+                self._logger.error("access type not valid: " + access_type)
                 sys.exit(0)
 
 
