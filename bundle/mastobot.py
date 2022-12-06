@@ -84,7 +84,7 @@ class Mastobot:
     def remove_file(self, file_path):
 
         if os.path.exists(file_path):
-            self._logger.info("removing file: " + file_path)
+            self._logger.debug("removing file: " + file_path)
             os.remove(file_path)
 
 
@@ -94,10 +94,10 @@ class Mastobot:
         file_exits = False
 
         if not os.path.isfile(file_path):
-            self._logger.info("file " + file_path + " not found, running setup.")
+            self._logger.debug("file " + file_path + " not found, running setup.")
             return
         else:
-            self._logger.info("file " + file_path + " found.")
+            self._logger.debug("file " + file_path + " found.")
             file_exits = True
             return file_exits
 
@@ -105,7 +105,7 @@ class Mastobot:
     @staticmethod
     def log_in(self, secrets_file_path, config_file_path):
 
-        self._logger.info("init log in.")
+        self._logger.debug("init log in.")
 
         uc_client_id     = self.get_parameter(self,"uc_client_id",     secrets_file_path)
         uc_client_secret = self.get_parameter(self,"uc_client_secret", secrets_file_path)
@@ -249,7 +249,7 @@ class Mastobot:
 
     def setup(self, secrets_file_path, config_file_path):
 
-        self._logger.info("init setup")
+        self._logger.debug("init setup")
 
         logged_in = False
 
