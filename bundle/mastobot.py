@@ -69,7 +69,7 @@ class Mastobot:
         client_id     = self._config.get("access_token.client_id")
         secret        = self._config.get("access_token.secret")
         token         = self._config.get("access_token.token")
-        self.mastodon = self.log_in(self, client_id, secret, token, self._hostname)    
+        self.mastodon = self.log_in(self, client_id, secret, token)    
 
 
     @staticmethod
