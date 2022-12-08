@@ -1,9 +1,12 @@
 from .config import Config
 from .logger import Logger
 from .mastobot import Mastobot
+from .translator import Translator
+
 
 __all__ = [
     "Config",
     "Logger",
     "Mastobot"
+    "Translator"
 ]
