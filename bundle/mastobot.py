@@ -99,7 +99,7 @@ class Mastobot:
         
         else:
             while(True):
-                logged_in, self.mastodon = self.setup(secrets_file_path, self._hostname)
+                logged_in, self.mastodon = self.setup(secrets_file_path)
 
                 if not logged_in:
                     self._logger.error("log in failed! Try again.")
