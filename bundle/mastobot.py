@@ -6,6 +6,7 @@
 
 from .config import Config
 from .logger import Logger
+
 import logging
 from mastodon import Mastodon
 from mastodon.Mastodon import MastodonMalformedEventError, MastodonNetworkError, MastodonReadTimeout, MastodonAPIError, MastodonIllegalArgumentError
@@ -40,19 +41,20 @@ class Mastobot:
 
     def __init__(self, config: Config):
 
-        self._config = config
-        self._logger = logging.getLogger(self._config.get("logger.name"))
+        self._config   = config
+        self._hostname = self._config.get("bot.hostname")   
+        self._logger   = logging.getLogger(self._config.get("logger.name"))
 
-        hostname    = self._config.get("bot.hostname")  
         access_type = self._config.get("bot.access_type")  
-        self._logger.info("init mastobot with access type " + access_type + " in " + hostname)
+
+        self._logger.info("init mastobot with access type " + access_type + " in " + self._hostname)
 
         match access_type:
             case 'AT': 
-                self.access_token_access(self, hostname)
+                self.access_token_access(self)
 
             case'CR':
-                self.credential_access(self, hostname)
+                self.credential_access(self)
 
             case _:
                 self._logger.error("access type not valid: " + access_type)
@@ -60,20 +62,20 @@ class Mastobot:
 
 
     @staticmethod
-    def access_token_access(self, hostname):
+    def access_token_access(self):
 
-        self._logger.debug("access token access in " + hostname)
+        self._logger.debug("access token access in " + self._hostname)
     
-        client_id = self._config.get("access_token.client_id")
-        secret    = self._config.get("access_token.secret")
-        token     = self._config.get("access_token.token")
-        self.mastodon    = self.log_in(self, client_id, secret, token, hostname)    
+        client_id     = self._config.get("access_token.client_id")
+        secret        = self._config.get("access_token.secret")
+        token         = self._config.get("access_token.token")
+        self.mastodon = self.log_in(self, client_id, secret, token, self._hostname)    
 
 
     @staticmethod
-    def credential_access(self, hostname):
+    def credential_access(self):
 
-        self._logger.debug("credential access in " + hostname)
+        self._logger.debug("credential access in " + self._hostname)
 
         force_login       = self._config.get("credentials.force_login")
         secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("credentials.secrets_file_path")
@@ -90,14 +92,14 @@ class Mastobot:
                 is_setup = True
 
         if is_setup:
-            client_id = self.get_parameter(self,"client_id",     secrets_file_path)
-            secret    = self.get_parameter(self,"secret", secrets_file_path)
-            token     = self.get_parameter(self,"token",  secrets_file_path)
-            self.mastodon    = self.log_in(self, client_id, secret, token, hostname)
+            client_id     = self.get_parameter(self,"client_id", secrets_file_path)
+            secret        = self.get_parameter(self,"secret", secrets_file_path)
+            token         = self.get_parameter(self,"token",  secrets_file_path)
+            self.mastodon = self.log_in(self, client_id, secret, token)
         
         else:
             while(True):
-                logged_in, self.mastodon = self.setup(secrets_file_path, hostname)
+                logged_in, self.mastodon = self.setup(secrets_file_path, self._hostname)
 
                 if not logged_in:
                     self._logger.error("log in failed! Try again.")
@@ -128,25 +130,24 @@ class Mastobot:
 
 
     @staticmethod
-    def log_in(self, client_id, secret, token, hostname):
+    def log_in(self, client_id, secret, token):
 
         self._logger.debug("client id: " + client_id)
         self._logger.debug("secret   : " + secret)
         self._logger.debug("token    : " + token)
-        self._logger.debug("hostname : " + hostname)
 
         self.mastodon = Mastodon(
             client_id = client_id,
             client_secret = secret,
             access_token = token,
-            api_base_url = 'https://' + hostname,
+            api_base_url = 'https://' + self._hostname,
         )
 
         return (self.mastodon)
 
 
     @staticmethod
-    def get_parameter(self, parameter, file_path ):
+    def get_parameter(self, parameter, file_path):
 
         with open( file_path ) as f:
             for line in f:
@@ -157,7 +158,7 @@ class Mastobot:
         sys.exit(0)
 
 
-    def setup(self, secrets_file_path, hostname):
+    def setup(self, secrets_file_path):
 
         self._logger.debug("mastobot setup")
 
@@ -174,9 +175,9 @@ class Mastobot:
             app_name = self._config.get("bot.app_name")
 
             Mastodon.create_app(app_name, scopes=["read","write"],
-                to_file="app_clientcred.txt", api_base_url=hostname)
+                to_file="app_clientcred.txt", api_base_url=self._hostname)
 
-            mastodon = Mastodon(client_id = "app_clientcred.txt", api_base_url = hostname)
+            mastodon = Mastodon(client_id = "app_clientcred.txt", api_base_url = self._hostname)
 
             mastodon.log_in(
                 user_name,
@@ -238,49 +239,23 @@ class Mastobot:
         return (logged_in, mastodon)
 
 
-    def get_mention(self, notif, keyword):
-
-        id         = notif.id
-        account_id = notif.account.id
-        username   = notif.account.acct
-        status_id  = notif.status.id
-        text       = notif.status.content
-        visibility = notif.status.visibility
-
-        reply, question = self.check_keyword(self, text, keyword)
-
-        mention_dict = {'reply': reply, 'question': question, 'id': id, 'account_id': account_id, 'username': username, 'status_id': status_id, 'text': text, 'visibility': visibility}
-
-        mention = self.__json_allow_dict_attrs(mention_dict)
-
-        return mention
-
-
     @staticmethod
-    def __json_allow_dict_attrs(json_object):
-        """
-        Makes it possible to use attribute notation to access a dicts
-        elements, while still allowing the dict to act as a dict.
-        """
-        if isinstance(json_object, dict):
-            return AttribAccessDict(json_object)
-        return json_object
+    def check_keyword_in_nofit(self, notif, keyword):
 
+        text = notif.status.content
 
-    @staticmethod
-    def check_keyword(self, text, keyword):
+        self._logger.debug("Original keyword: " + keyword + " with " + str(len(keyword)))
+        self._logger.debug("Original content: " + text)
 
-        reply = False
-
+        found   = False
         keyword = keyword.lower()
         
-        self._logger.debug("checking " + keyword + " with " + str(len(keyword)))
-
         content = self.cleanhtml(self, text)
         content = self.unescape(self, content)
         content = content.lower()
             
-        self._logger.debug("changed content: " + content)
+        self._logger.debug("Changed keyword: " + keyword + " with " + str(len(keyword)))
+        self._logger.debug("Changed content: " + content)
 
         try:
             start = content.index("@")
@@ -297,17 +272,15 @@ class Mastobot:
                 content = content[0: start:] + content[end +1::]
                 i += 1
 
-            question = content
-
             keyword_length = len(keyword)
 
-            if unidecode.unidecode(question)[0:keyword_length] == keyword:
-                reply = True
+            if unidecode.unidecode(content)[0:keyword_length] == keyword:
+                found = True
 
         except:
             pass
 
-        return (reply, question)
+        return (found)
 
 
     @staticmethod
@@ -325,13 +298,18 @@ class Mastobot:
         return s
 
 
-    def replay(self, mention, aux_text):
+    def replay(self, notif, aux_text):
 
-        post_text  = f"@{mention.username}{aux_text}"
+        id         = notif.id
+        username   = notif.account.acct
+        status_id  = notif.status.id
+        visibility = notif.status.visibility
+
+        post_text  = f"@{username}{aux_text}"
         post_text = (post_text[:400] + '... ') if len(post_text) > 400 else post_text
 
-        self._logger.debug("replaying notification " + str(mention.id) + " with\n" + post_text)
-        self.mastodon.status_post(post_text, in_reply_to_id=mention.status_id,visibility=mention.visibility)
+        self._logger.debug("replaying notification " + str(id) + " with\n" + post_text)
+        self.mastodon.status_post(post_text, in_reply_to_id=status_id,visibility=visibility)
 
 
     @staticmethod
