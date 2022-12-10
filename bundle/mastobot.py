@@ -78,7 +78,7 @@ class Mastobot:
         self._logger.debug("credential access in " + self._hostname)
 
         force_login       = self._config.get("credentials.force_login")
-        secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("credentials.secrets_file_path")
+        secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("credentials.secrets_file_name")
 
         self._logger.debug("force login      : " + str(force_login))
         self._logger.debug("secrets file path: " + secrets_file_path)
@@ -238,6 +238,18 @@ class Mastobot:
         
         return (logged_in, mastodon)
 
+    @staticmethod
+    def modify_file(self, file_name, pattern,value=""):
+
+        fh=fileinput.input(file_name,inplace=True)
+
+        for line in fh:
+            replacement=pattern + value
+            line=re.sub(pattern,replacement,line)
+            sys.stdout.write(line)
+
+        fh.close()
+
 
     @staticmethod
     def check_keyword_in_nofit(self, notif, keyword):
@@ -254,31 +266,14 @@ class Mastobot:
         content = self.unescape(self, content)
         content = content.lower()
             
-        self._logger.debug("Changed keyword: " + keyword + " with " + str(len(keyword)))
-        self._logger.debug("Changed content: " + content)
+        self._logger.debug("Checking keyword: " + keyword + " with " + str(len(keyword)))
+        self._logger.debug("Checking content: " + content)
 
-        try:
-            start = content.index("@")
-            end = content.index(" ")
-            if len(content) > end:
-                content = content[0: start:] + content[end +1::]
+        word_list = content.split()
 
-            cleanit = content.count('@')
+        found = keyword in word_list
 
-            i = 0
-            while i < cleanit :
-                start = content.rfind("@")
-                end = len(content)
-                content = content[0: start:] + content[end +1::]
-                i += 1
-
-            keyword_length = len(keyword)
-
-            if unidecode.unidecode(content)[0:keyword_length] == keyword:
-                found = True
-
-        except:
-            pass
+        self._logger.debug("found: " + str(found))
 
         return (found)
 
@@ -304,24 +299,14 @@ class Mastobot:
         username   = notif.account.acct
         status_id  = notif.status.id
         visibility = notif.status.visibility
+        language   = notif.status.language
 
         post_text  = f"@{username}{aux_text}"
         post_text = (post_text[:400] + '... ') if len(post_text) > 400 else post_text
 
         self._logger.debug("replaying notification " + str(id) + " with\n" + post_text)
-        self.mastodon.status_post(post_text, in_reply_to_id=status_id,visibility=visibility)
+        self.mastodon.status_post(post_text, in_reply_to_id=status_id, visibility=visibility, language=language)
 
 
-    @staticmethod
-    def modify_file(self, file_name, pattern,value=""):
-
-        fh=fileinput.input(file_name,inplace=True)
-
-        for line in fh:
-            replacement=pattern + value
-            line=re.sub(pattern,replacement,line)
-            sys.stdout.write(line)
-
-        fh.close()
-
+    
 
