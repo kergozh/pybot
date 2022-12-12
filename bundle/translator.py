@@ -1,30 +1,31 @@
-import yaml
+###
+# Utilidad para la internalización de los literales de un programa python
+###  
+
+from .storage import Storage
 
 DICTIONARY_FILENAME = "locale.yaml"
 ERROR_MISSAGE       = " text id not found"
 IN_ERROR_MISSAGE    = " in "
 OR_ERROR_MISSAGE    = " or default language "
 
+class Translator (Storage):
 
-class Translator:
-    def __init__(self, default_language: str) -> None:
-        self._dicctionaty = {}
+    def __init__(self, default_language: str, filename: str = DICTIONARY_FILENAME) -> None:
+
         self._default_language = default_language
         self._fixed_language   = default_language
-        
-        self.read_file()
 
-    def read_file(self) -> None:
-        with open(DICTIONARY_FILENAME, 'r') as stream:
-            self._dicctionaty = yaml.safe_load(stream)
-    
+        super().__init__(filename = filename)
+
+   
     def get_text(self, text_id: any, language = "") -> str:
 
         if language == "":
             language = self._fixed_language 
 
-        if text_id in self._dicctionaty:
-            local_dict = self._dicctionaty [text_id]
+        if text_id in self._storage:
+            local_dict = self._storage [text_id]
 
             if language in local_dict:
                 local_dict = local_dict [language]
@@ -40,10 +41,10 @@ class Translator:
 
         return local_dict
 
+
     def fix_language(self, language) -> None:
+
         self._fixed_language = language
 
         return 
 
-    def get_all(self) -> dict:
-        return self._dicctionaty

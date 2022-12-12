@@ -16,52 +16,55 @@ import fileinput,re
 import os
 import sys
 import os.path
-
-###
-# Dict helper class.
-# Defined at top level so it can be pickled.
-###
-class AttribAccessDict(dict):
-
-    def __getattr__(self, attr):
-
-        if attr in self:
-            return self[attr]
-        else:
-            raise AttributeError("Attribute not found: " + str(attr))
-
-    def __setattr__(self, attr, val):
-
-        if attr in self:
-            raise AttributeError("Attribute-style access is read only")
-        super(AttribAccessDict, self).__setattr__(attr, val)
-
+import yaml
 
 class Mastobot:
 
-    def __init__(self, config: Config):
+    def __init__(self, botname):
 
-        self._config   = config
-        self._hostname = self._config.get("bot.hostname")   
-        self._logger   = logging.getLogger(self._config.get("logger.name"))
+        self._config     = Config()
+        self._logger     = Logger(self._config).getLogger()
 
-        access_type = self._config.get("bot.access_type")  
+        self._logger.info("init " + botname)
 
-        self._logger.info("init mastobot with access type " + access_type + " in " + self._hostname)
-
-        match access_type:
-            case 'AT': 
-                self.access_token_access(self)
-
-            case'CR':
-                self.credential_access(self)
-
-            case _:
-                self._logger.error("access type not valid: " + access_type)
-                sys.exit(0)
+        self.init_app_options()
+        self.init_test_options()
+        self.init_bot_connection()
 
 
-    @staticmethod
+    def run(self, botname):
+
+        self._logger.info("end " + botname)
+
+
+    def init_app_options(self):
+
+        self._hostname    = self._config.get("bot.hostname")   
+        self._access_type = self._config.get("bot.access_type")  
+
+        actions_file_name = self._config.get("app.actions_file_name") 
+        with open(actions_file_name, 'r') as stream:
+            self._actions  = yaml.safe_load(stream)
+
+
+    def init_test_options(self):
+
+        self._push_disable    = self._config.get("testing.disable_push")
+
+
+    def init_bot_connection(self):
+
+        if self._access_type ==  'AT': 
+                self.access_token_access()
+         
+        elif self._access_type ==  'CR': 
+            self.credential_access()
+
+        else:
+            self._logger.error("access type not valid: " + self._access_type)
+            raise RuntimeError
+
+
     def access_token_access(self):
 
         self._logger.debug("access token access in " + self._hostname)
@@ -69,10 +72,9 @@ class Mastobot:
         client_id     = self._config.get("access_token.client_id")
         secret        = self._config.get("access_token.secret")
         token         = self._config.get("access_token.token")
-        self.mastodon = self.log_in(self, client_id, secret, token)    
+        self.mastodon = self.log_in(client_id, secret, token)    
 
 
-    @staticmethod
     def credential_access(self):
 
         self._logger.debug("credential access in " + self._hostname)
@@ -86,16 +88,16 @@ class Mastobot:
         is_setup = False
 
         if force_login:
-            self.remove_file(self, secrets_file_path)     
+            self.remove_file(secrets_file_path)     
         else:
-            if self.check_file(self, secrets_file_path):
+            if self.check_file(secrets_file_path):
                 is_setup = True
 
         if is_setup:
-            client_id     = self.get_parameter(self,"client_id", secrets_file_path)
-            secret        = self.get_parameter(self,"secret", secrets_file_path)
-            token         = self.get_parameter(self,"token",  secrets_file_path)
-            self.mastodon = self.log_in(self, client_id, secret, token)
+            client_id     = self.get_parameter("client_id", secrets_file_path)
+            secret        = self.get_parameter("secret", secrets_file_path)
+            token         = self.get_parameter("token",  secrets_file_path)
+            self.mastodon = self.log_in(client_id, secret, token)
         
         else:
             while(True):
@@ -108,14 +110,12 @@ class Mastobot:
 
 
     @staticmethod
-    def remove_file(self, file_path):
+    def remove_file(file_path):
 
         if os.path.exists(file_path):
-            self._logger.debug("removing file: " + file_path)
             os.remove(file_path)
 
 
-    @staticmethod
     def check_file(self, file_path):
 
         file_exits = False
@@ -129,7 +129,6 @@ class Mastobot:
             return file_exits
 
 
-    @staticmethod
     def log_in(self, client_id, secret, token):
 
         self._logger.debug("client id: " + client_id)
@@ -146,7 +145,6 @@ class Mastobot:
         return (self.mastodon)
 
 
-    @staticmethod
     def get_parameter(self, parameter, file_path):
 
         with open( file_path ) as f:
@@ -155,7 +153,7 @@ class Mastobot:
                     return line.replace(parameter + ":", "").strip()
 
         self._logger.error(file_path + " missing parameter " + parameter)
-        sys.exit(0)
+        raise RuntimeError 
 
 
     def setup(self, secrets_file_path):
@@ -212,11 +210,11 @@ class Mastobot:
                 while line:
                     if cnt == 1:
                         self._logger.info("writing client id to " + secrets_file_path)
-                        self.modify_file(self, secrets_file_path, "client_id: ", value=line.rstrip())
+                        self.modify_file(secrets_file_path, "client_id: ", value=line.rstrip())
 
                     elif cnt == 2:
                         self._logger.info("writing secret to " + secrets_file_path)
-                        self.modify_file(self, secrets_file_path, "secret: ", value=line.rstrip())
+                        self.modify_file(secrets_file_path, "secret: ", value=line.rstrip())
 
                     line = fp.readline()
                     cnt += 1
@@ -226,10 +224,10 @@ class Mastobot:
             with open(token_path) as fp:
                 line = fp.readline()
                 self._logger.info("writing token to " + secrets_file_path)
-                self.modify_file(self, secrets_file_path, "token: ", value=line.rstrip())
+                self.modify_file(secrets_file_path, "token: ", value=line.rstrip())
 
-            self.remove_file(self, "app_clientcred.txt")     
-            self.remove_file(self, "app_usercred.txt")     
+            self.remove_file("app_clientcred.txt")     
+            self.remove_file("app_usercred.txt")     
 
             self._logger.info("secrets setup done!")
 
@@ -238,8 +236,9 @@ class Mastobot:
         
         return (logged_in, mastodon)
 
+
     @staticmethod
-    def modify_file(self, file_name, pattern,value=""):
+    def modify_file(file_name, pattern, value = ""):
 
         fh=fileinput.input(file_name,inplace=True)
 
@@ -251,7 +250,6 @@ class Mastobot:
         fh.close()
 
 
-    @staticmethod
     def check_keyword_in_nofit(self, notif, keyword):
 
         text = notif.status.content
@@ -262,8 +260,8 @@ class Mastobot:
         found   = False
         keyword = keyword.lower()
         
-        content = self.cleanhtml(self, text)
-        content = self.unescape(self, content)
+        content = self.cleanhtml(text)
+        content = self.unescape(content)
         content = content.lower()
             
         self._logger.debug("Checking keyword: " + keyword + " with " + str(len(keyword)))
@@ -279,7 +277,7 @@ class Mastobot:
 
 
     @staticmethod
-    def cleanhtml(self, raw_html):
+    def cleanhtml(raw_html):
 
         cleanr = re.compile('<.*?>')
         cleantext = re.sub(cleanr, '', raw_html)
@@ -287,7 +285,7 @@ class Mastobot:
 
 
     @staticmethod
-    def unescape(self, s):
+    def unescape(s):
 
         s = s.replace("&apos;", "'")
         return s
@@ -306,7 +304,4 @@ class Mastobot:
 
         self._logger.debug("replaying notification " + str(id) + " with\n" + post_text)
         self.mastodon.status_post(post_text, in_reply_to_id=status_id, visibility=visibility, language=language)
-
-
-    
 

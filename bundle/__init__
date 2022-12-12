@@ -1,3 +1,4 @@
+from .storage import Storage
 from .config import Config
 from .logger import Logger
 from .mastobot import Mastobot
@@ -5,6 +6,7 @@ from .translator import Translator
 
 
 __all__ = [
+    "Storage",
     "Config",
     "Logger",
     "Mastobot"
