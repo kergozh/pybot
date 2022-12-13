@@ -6,6 +6,7 @@
 
 from .config import Config
 from .logger import Logger
+from .translator import Translator
 
 import logging
 from mastodon import Mastodon
@@ -28,7 +29,6 @@ class Mastobot:
         self._logger.info("init " + botname)
 
         self.init_app_options()
-        self.init_test_options()
         self.init_bot_connection()
 
 
@@ -47,11 +47,6 @@ class Mastobot:
             self._actions  = yaml.safe_load(stream)
 
 
-    def init_test_options(self):
-
-        self._push_disable    = self._config.get("testing.disable_push")
-
-
     def init_bot_connection(self):
 
         if self._access_type ==  'AT': 
@@ -63,6 +58,36 @@ class Mastobot:
         else:
             self._logger.error("access type not valid: " + self._access_type)
             raise RuntimeError
+
+
+    def init_publish_bot(self):
+
+        self._post_disabled    = self._config.get("testing.disable_post")
+
+        self._logger.debug("post disabled: " + str(self._post_disabled))
+
+
+    def init_replay_bot(self):
+
+        self._post_disabled    = self._config.get("testing.disable_post")
+        self._dismiss_disabled = self._config.get("testing.disable_dismiss")
+        self._test_word        = self._config.get("testing.text_word")
+        ignore_test_toot       = self._config.get("testing.ignore_test_toot")
+
+        self._logger.debug("post disabled: "    + str(self._post_disabled))
+        self._logger.debug("dismiss disabled: " + str(self._dismiss_disabled))
+        self._logger.debug("test_word: "        + self._test_word)
+        self._logger.debug("ignore test: "      + str(ignore_test_toot))
+
+        if self._test_word != "" and ignore_test_toot:
+            self._ignore_test = True
+        else:
+            self._ignore_test = False 
+
+
+    def init_translator(self, default_lenguage : str = "es"):
+
+        self._translator = Translator(default_lenguage)
 
 
     def access_token_access(self):
@@ -250,6 +275,44 @@ class Mastobot:
         fh.close()
 
 
+    def post_toot(self, text : str, language : str, id : int = 0): 
+
+        if self._post_disabled:
+            self._logger.info("posting answer disabled with id " + str(id))                    
+
+        else:
+            self._logger.info("answering with id " + str(id))
+            self.mastodon.status_post(text, language = language)
+
+
+    def process_notif(self, notif, notif_type, keyword):
+
+        self._logger.debug("process notif type: " + notif_type)
+        self._logger.debug("process keyword   : " + keyword)
+
+        replay  = False
+        dismiss = True
+
+        if notif.type == notif_type:
+            if self._ignore_test and self.check_keyword_in_nofit(notif, self._test_word):
+                self._logger.info("ignoring test notification id " + str(notif.id))
+                dismiss = False
+            
+            else:
+                if self.check_keyword_in_nofit(notif, keyword):
+                    
+                    self._logger.info("replaying notification id " + str(notif.id))                    
+                    replay = True
+
+                    if self._dismiss_disabled:
+                        self._logger.debug("notification replayed but dismiss disabled in id " + str(notif.id))               
+                        dismiss = False    
+                    else:     
+                        self._logger.debug("dismissing notification id " + str(notif.id))              
+                                
+        return replay, dismiss
+
+
     def check_keyword_in_nofit(self, notif, keyword):
 
         text = notif.status.content
@@ -291,17 +354,14 @@ class Mastobot:
         return s
 
 
-    def replay(self, notif, aux_text):
+    def replay_toot(self, text, notif): 
 
-        id         = notif.id
-        username   = notif.account.acct
         status_id  = notif.status.id
         visibility = notif.status.visibility
         language   = notif.status.language
 
-        post_text  = f"@{username}{aux_text}"
-        post_text = (post_text[:400] + '... ') if len(post_text) > 400 else post_text
+        if self._post_disabled:
+            self._logger.info("posting answer disabled")                    
 
-        self._logger.debug("replaying notification " + str(id) + " with\n" + post_text)
-        self.mastodon.status_post(post_text, in_reply_to_id=status_id, visibility=visibility, language=language)
-
+        else:
+            self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
