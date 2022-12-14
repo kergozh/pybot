@@ -4,9 +4,9 @@
 # En https://git.mastodont.cat/spla/info
 ###  
 
-from bundle.config import Config
-from bundle.logger import Logger
-from bundle.translator import Translator
+from .config import Config
+from .logger import Logger
+from .translator import Translator
 
 import logging
 from mastodon import Mastodon
@@ -62,9 +62,18 @@ class Mastobot:
 
     def init_publish_bot(self):
 
-        self._post_disabled    = self._config.get("testing.disable_post")
+        self._post_disabled = self._config.get("testing.disable_post")
+        self._user_mention  = self._config.get("testing.user_mention")
+        force_mention       = self._config.get("testing.force_mention")
 
         self._logger.debug("post disabled: " + str(self._post_disabled))
+        self._logger.debug("user_mention: "  + self._user_mention)
+        self._logger.debug("force_mention: " + str(force_mention))
+
+        if self._user_mention != "" and force_mention:
+            self._force_mention = True
+        else:
+            self._force_mention = False 
 
 
     def init_replay_bot(self):
@@ -281,8 +290,15 @@ class Mastobot:
             self._logger.info("posting answer disabled with id " + str(id))                    
 
         else:
+            if self._force_mention:
+                visibility = "direct"
+                text = "@" + self._user_mention + "\n\n" + text
+                text = (text[:400] + '... ') if len(text) > 400 else text
+            else:
+                visibility = "public" 
+
             self._logger.info("answering with id " + str(id))
-            self.mastodon.status_post(text, language = language)
+            self.mastodon.status_post(text, language = language, visibility = visibility)
 
 
     def process_notif(self, notif, notif_type, keyword):
