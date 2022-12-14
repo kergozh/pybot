@@ -4,9 +4,9 @@
 # En https://git.mastodont.cat/spla/info
 ###  
 
-from .config import Config
-from .logger import Logger
-from .translator import Translator
+from bundle.config import Config
+from bundle.logger import Logger
+from bundle.translator import Translator
 
 import logging
 from mastodon import Mastodon
@@ -275,7 +275,7 @@ class Mastobot:
         fh.close()
 
 
-    def post_toot(self, text : str, language : str, id : int = 0): 
+    def post_toot(self, text, language, id : int = 0): 
 
         if self._post_disabled:
             self._logger.info("posting answer disabled with id " + str(id))                    
@@ -294,13 +294,15 @@ class Mastobot:
         dismiss = True
 
         if notif.type == notif_type:
-            if self._ignore_test and self.check_keyword_in_nofit(notif, self._test_word):
+
+            notif_word_list = self.find_notif_word_list(notif)
+
+            if self._ignore_test and self._test_word.lower() in notif_word_list:
                 self._logger.info("ignoring test notification id " + str(notif.id))
                 dismiss = False
             
             else:
-                if self.check_keyword_in_nofit(notif, keyword):
-                    
+                if keyword.lower() in notif_word_list:
                     self._logger.info("replaying notification id " + str(notif.id))                    
                     replay = True
 
@@ -313,30 +315,19 @@ class Mastobot:
         return replay, dismiss
 
 
-    def check_keyword_in_nofit(self, notif, keyword):
+    def find_notif_word_list(self, notif):
 
         text = notif.status.content
 
-        self._logger.debug("Original keyword: " + keyword + " with " + str(len(keyword)))
         self._logger.debug("Original content: " + text)
-
-        found   = False
-        keyword = keyword.lower()
         
-        content = self.cleanhtml(text)
-        content = self.unescape(content)
-        content = content.lower()
+        text = self.cleanhtml(text)
+        text = self.unescape(text)
+        text = text.lower()
             
-        self._logger.debug("Checking keyword: " + keyword + " with " + str(len(keyword)))
-        self._logger.debug("Checking content: " + content)
+        self._logger.debug("Checking content: " + text)
 
-        word_list = content.split()
-
-        found = keyword in word_list
-
-        self._logger.debug("found: " + str(found))
-
-        return (found)
+        return text.split()
 
 
     @staticmethod
