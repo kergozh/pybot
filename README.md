@@ -13,7 +13,7 @@ Within Python Virtual Environment:
 
 2. Run `pip install -r requirements.txt` to install needed libraries.  
 
-For update the bundle in an app:
+For update the bundle:
 
 1. Activate the virtual environment `source .venv/bin/activate` 
 

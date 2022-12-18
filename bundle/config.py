@@ -12,7 +12,8 @@ class Config (Storage):
 
     def __init__(self, filename: str = CONFIG_FILENAME) -> None:
 
-        super().__init__(filename = filename)
+        super().__init__(filename, "")
+        self.read_yaml()
 
 
     def get(self, param_name: str = "", default_value: any = None) -> any:

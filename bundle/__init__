@@ -3,6 +3,7 @@ from .config import Config
 from .logger import Logger
 from .mastobot import Mastobot
 from .translator import Translator
+from .programmer import Programmer
 
 
 __all__ = [
@@ -11,4 +12,5 @@ __all__ = [
     "Logger",
     "Mastobot"
     "Translator"
+    "Programmer"
 ]

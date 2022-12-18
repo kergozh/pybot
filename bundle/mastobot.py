@@ -4,9 +4,11 @@
 # En https://git.mastodont.cat/spla/info
 ###  
 
-from .config import Config
-from .logger import Logger
-from .translator import Translator
+from bundle.logger import Logger
+from bundle.translator import Translator
+from bundle.programmer import Programmer
+from bundle.config import Config
+from bundle.storage import Storage
 
 import logging
 from mastodon import Mastodon
@@ -18,6 +20,7 @@ import os
 import sys
 import os.path
 import yaml
+
 
 class Mastobot:
 
@@ -97,6 +100,20 @@ class Mastobot:
     def init_translator(self, default_lenguage : str = "es"):
 
         self._translator = Translator(default_lenguage)
+
+
+    def init_programmer(self):
+
+        self._programmer = Programmer()
+        self._force_programmer = self._config.get("testing.force_programmer")
+
+
+    def init_output_file(self):
+
+        directory = self._config.get("app.output_directory")
+        filename  = self._config.get("app.output_file_name")
+        self._output_file = Storage(filename, directory)
+        self._disable_write = self._config.get("testing.disable_write")
 
 
     def access_token_access(self):
@@ -372,3 +389,28 @@ class Mastobot:
 
         else:
             self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
+
+    def check_programmer (self, hours, restore):
+
+
+        if self._force_programmer:
+            self._logger.debug("forced programmer")                    
+            check = True
+        else:
+            check = self._programmer.check_time(hours, restore)
+            self._logger.debug("checking programer: " + str(check))                    
+
+        return check
+
+
+    def write_output_file (self, row):
+
+        if self._disable_write:
+            self._logger.debug("write output file disabled")                    
+            check = True
+        else:
+            self._output_file.add_row(row)
+            self._logger.info("output file written")                    
+
+
+

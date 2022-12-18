@@ -16,7 +16,8 @@ class Translator (Storage):
         self._default_language = default_language
         self._fixed_language   = default_language
 
-        super().__init__(filename = filename)
+        super().__init__(filename, "")
+        self.read_yaml()
 
    
     def get_text(self, text_id: any, language = "") -> str:
@@ -45,6 +46,4 @@ class Translator (Storage):
     def fix_language(self, language) -> None:
 
         self._fixed_language = language
-
-        return 
 

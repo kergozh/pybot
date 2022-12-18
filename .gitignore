@@ -4,4 +4,7 @@ __pycache__/
 *$py.class
 
 build
-
+pgm
+.venv
+pyproject.toml
+setup*

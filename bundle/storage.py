@@ -4,34 +4,46 @@
 # En https://github.com/XaviArnaus/python-bundle
 ###  
 
+import csv
+import os
+import os.path
 import yaml
 
 class Storage:
-    def __init__(self, filename) -> None:
+    def __init__(self, filename, directory) -> None:
 
-        self._filename = filename
-        self._storage = {}
-        self.read_file()
+        if directory == "" or directory == None:
+            self._filepath = filename
+        else:    
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            self._filepath = directory + "/" + filename
 
 
-    def read_file(self) -> None:
+    def read_yaml(self) -> None:
     
-        with open(self._filename, 'r') as stream:
+        with open(self._filepath, 'r') as stream:
             self._storage = yaml.safe_load(stream)
 
 
-    def get(self, param_name: str = "", default_value: any = None) -> any:
+    def read_csv(self) -> None:
     
-        pass
+        with open(self._filepath, newline = '') as fp:
+            rows = csv.reader(fp)
+            for row in rows:   
+                self._storage.append(row)
 
-
-    def get_all(self) -> dict:
+    def write_row(self, row) -> None:
     
-        return self._storage
+        with open(self._filepath, 'w', newline="") as fp:
+            writer = csv.writer(fp)
+            writer.writerow(row)
 
 
-    def set(self, param_name: str, value: any = None):
+    def add_row(self, row) -> None:
     
-        if param_name == None:
-            raise RuntimeError("Params must have a name")
-        self._storage[param_name] = value
+        with open(self._filepath, 'a', newline="") as fp:
+            writer = csv.writer(fp)
+            writer.writerow(row)
+
+
