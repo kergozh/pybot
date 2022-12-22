@@ -4,11 +4,11 @@
 # En https://git.mastodont.cat/spla/info
 ###  
 
-from bundle.logger import Logger
-from bundle.translator import Translator
-from bundle.programmer import Programmer
-from bundle.config import Config
-from bundle.storage import Storage
+from .logger import Logger
+from .translator import Translator
+from .programmer import Programmer
+from .config import Config
+from .storage import Storage
 
 import logging
 from mastodon import Mastodon
@@ -331,7 +331,7 @@ class Mastobot:
             notif_word_list = self.find_notif_word_list(notif)
 
             if self._ignore_test and self._test_word.lower() in notif_word_list:
-                self._logger.info("ignoring test notification id " + str(notif.id))
+                self._logger.debug("ignoring test notification id " + str(notif.id))
                 dismiss = False
             
             else:
@@ -390,6 +390,7 @@ class Mastobot:
         else:
             self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
 
+
     def check_programmer (self, hours, restore):
 
 
@@ -398,7 +399,7 @@ class Mastobot:
             check = True
         else:
             check = self._programmer.check_time(hours, restore)
-            self._logger.debug("checking programer: " + str(check))                    
+            self._logger.info("checking programer with " + str(hours) + " resultat " + str(check))                    
 
         return check
 

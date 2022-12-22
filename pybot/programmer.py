@@ -39,34 +39,33 @@ class Programmer (Storage):
         
         check = False
         now = datetime.datetime.now()
-        year = str(now.year)
-        month = str(now.month)
-        day = str(now.day)
-        hour = str(now.hour)
-        minute = str(now.minute)
+        now_year   = now.strftime("%Y")
+        now_month  = now.strftime("%m")
+        now_day    = now.strftime("%d")
+        now_hour   = now.strftime("%H")
+        now_minute = now.strftime("%M")
  
         if "*" in hours:
             # True si no lo hemos hecho ya en este día-hora.
-            if day != self._day or hour != self._hour:
+            if now_year != self._year or now_month != self._month or now_day != self._day or now_hour != self._hour:
                 check = True
         else: 
             for hour2check in hours:
-                # True si no lo hemos hecho ya en este día-hora 
-                if hour == hour2check:
-                    if day != self._day or hour != self._hour:
+                if hour2check == now_hour:
+                    # True si no lo hemos hecho ya en este día-hora 
+                    if now_year != self._year or now_month != self._month or now_day != self._day or now_hour != self._hour:
                         check = True
 
-                # Si se pide (restore), comprobamos si se ha pasado la hora.
+                # Si se pide (restore), comprobamos hoy se ha pasado la hora y el programmer no se ha ejecutado.
+                # Para ver si se saltaron las últimas horas de ayer habría que complicar el algoritmo :-)
                 else:
-                    if hour > hour2check and restore:
-                        if (year < self._year) or \
-                           (year == self._year and month < self._month) or \
-                           (year == self._year and month == self._month and day < self._day) or \
-                           (year == self._year and month == self._month and day == self._day and hour2check > self._hour):
-                           check = True
+                    if now_hour > hour2check and restore:
+                        if (now_year == self._year and now_month == self._month and now_day == self._day and hour2check > self._hour) or \
+                           (self._year == "" and self._month == "" and self._day == "" and self._hour == ""):                        
+                            check = True
 
         if check:
-            row = [year, month, day, hour, minute]
+            row = [now_year, now_month, now_day, now_hour, now_minute]
             self.write_row(row) 
 
         return check 
