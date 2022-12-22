@@ -1,15 +1,15 @@
-# Mastobot Bundle
+# Pybot
 
-Set of packages to be used in mastondon bot Python apps
+Set of packages to be used in Python bots
 Done from:
-- Python Bundle of @arnaus@mastodont.cat:  https://github.com/XaviArnaus/python-bundle
+- Pyxavi of @arnaus@mastodont.cat:  https://github.com/XaviArnaus/pyxavi
 - Info bot of @spla@mastodont.cat: https://git.mastodont.cat/spla/info
 
 ### Usage:
 
 Within Python Virtual Environment:
 
-1. Clone the repository `git clone https://github.com/lgbaixauli/mastobot-bundle.git` 
+1. Clone the repository `git clone https://github.com/lgbaixauli/pybot.git` 
 
 2. Run `pip install -r requirements.txt` to install needed libraries.  
 
