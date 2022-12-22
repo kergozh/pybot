@@ -1,4 +1,4 @@
-# Pybot
+# pybot
 
 Set of packages to be used in Python bots
 Done from:
