@@ -304,7 +304,7 @@ class Mastobot:
     def post_toot(self, text, language, id : int = 0): 
 
         if self._post_disabled:
-            self._logger.info("posting answer disabled with id " + str(id))                    
+            self._logger.info("posting disabled with id " + str(id))                    
 
         else:
             if self._force_mention:
@@ -314,7 +314,7 @@ class Mastobot:
             else:
                 visibility = "public" 
 
-            self._logger.info("answering with id " + str(id))
+            self._logger.info("posting toot with id " + str(id))
             self.mastodon.status_post(text, language = language, visibility = visibility)
 
 
@@ -393,13 +393,12 @@ class Mastobot:
 
     def check_programmer (self, hours, restore):
 
-
         if self._force_programmer:
             self._logger.debug("forced programmer")                    
             check = True
         else:
             check = self._programmer.check_time(hours, restore)
-            self._logger.info("checking programer with " + str(hours) + " resultat " + str(check))                    
+            self._logger.info("checking programmer with " + str(hours) + " resultat " + str(check))                    
 
         return check
 
