@@ -335,7 +335,7 @@ class Mastobot:
                 dismiss = False
             
             else:
-                if keyword.lower() in notif_word_list:
+                if keyword.lower() in notif_word_list or keyword == "":
                     self._logger.info("replaying notification id " + str(notif.id))                    
                     replay = True
 
