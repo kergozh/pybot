@@ -1,6 +1,6 @@
 # pybot
 
-Set of packages to be used in Python bots
+Set of utilities to be used in Python bots
 Done from:
 - Pyxavi of @arnaus@mastodont.cat:  https://github.com/XaviArnaus/pyxavi
 - Info bot of @spla@mastodont.cat: https://git.mastodont.cat/spla/info
