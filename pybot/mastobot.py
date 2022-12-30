@@ -33,6 +33,8 @@ class Mastobot:
 
         self.init_app_options()
         self.init_bot_connection()
+        
+        self._me = "@" + self.mastodon.me()["username"].strip()
 
 
     def run(self, botname):
@@ -335,7 +337,7 @@ class Mastobot:
                 dismiss = False
             
             else:
-                if keyword.lower() in notif_word_list or keyword == "":
+                if (notif_word_list[0].strip() == self._me) and (keyword.lower() in notif_word_list or keyword == ""):
                     self._logger.info("replaying notification id " + str(notif.id))                    
                     replay = True
 
