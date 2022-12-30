@@ -35,6 +35,7 @@ class Mastobot:
         self.init_bot_connection()
         
         self._me = "@" + self.mastodon.me()["username"].strip()
+        self._logger.debug("me: " + self._me)
 
 
     def run(self, botname):
