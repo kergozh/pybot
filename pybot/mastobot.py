@@ -49,7 +49,7 @@ class Mastobot:
         self._access_type = self._config.get("bot.access_type")  
 
         actions_file_name = self._config.get("app.actions_file_name") 
-        with open(actions_file_name, 'r') as stream:
+        with open(actions_file_name, 'r', encoding='utf-8') as stream:
             self._actions  = yaml.safe_load(stream)
 
 
