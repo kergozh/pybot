@@ -380,8 +380,10 @@ class Mastobot:
             content = self.clean_content(notif.status.content)
 
             # sólo si la notificacions va dirigida al bot
-            if content.find(self._me) == 0:
+            if content.find(self._me) != 0:
+                content = ""
 
+            else:
                 if self._ignore_test and content.find(self._test_word) != -1:
                     self._logger.debug("ignoring test notification id " + str(notif.id))
                     dismiss = False
