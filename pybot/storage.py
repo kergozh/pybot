@@ -22,7 +22,7 @@ class Storage:
 
     def read_yaml(self) -> None:
     
-        with open(self._filepath, 'r') as stream:
+        with open(self._filepath, 'r', encoding='utf-8') as stream:
             self._storage = yaml.safe_load(stream)
 
 
