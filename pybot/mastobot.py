@@ -4,11 +4,11 @@
 # En https://git.mastodont.cat/spla/info
 ###  
 
-from pybot.logger import Logger
-from translator import Translator
-from pybot.programmer import Programmer
-from config import Config
-from storage import Storage
+from .logger import Logger
+from .translator import Translator
+from .programmer import Programmer
+from .config import Config
+from .storage import Storage
 
 import logging
 from mastodon import Mastodon
