@@ -329,8 +329,8 @@ class Mastobot:
             for text in list:
  
                 if add_text != "":
-                    text = "@" + self._user_mention + "\n\n" + text
-                    text = (text[:400] + '... ') if len(text) > 400 else text
+                    text = add_text + text
+                text = (text[:400] + '... ') if len(text) > 400 else text
 
                 self._logger.info("posting toot")
                 status = self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
