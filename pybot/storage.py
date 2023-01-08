@@ -23,7 +23,7 @@ class Storage:
     def read_yaml(self) -> None:
     
         with open(self._filepath, 'r', encoding='utf-8') as stream:
-            self._storage = yaml.safe_load(stream)
+            self._storage = yaml.load(stream.read(), Loader=yaml.FullLoader)
 
 
     def read_csv(self) -> None:
