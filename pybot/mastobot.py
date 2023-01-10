@@ -4,21 +4,25 @@
 # En https://git.mastodont.cat/spla/info
 ###  
 
+import logging
+import getpass
+import fileinput
+import re
+import os
+import sys
+import os.path
+from types import SimpleNamespace
+
+import unidecode
+import yaml
+from mastodon import Mastodon
+from mastodon.Mastodon import MastodonMalformedEventError, MastodonNetworkError, MastodonReadTimeout, MastodonAPIError, MastodonIllegalArgumentError
+
 from .logger import Logger
 from .translator import Translator
 from .programmer import Programmer
 from .config import Config
 from .storage import Storage
-
-import logging
-from mastodon import Mastodon
-from mastodon.Mastodon import MastodonMalformedEventError, MastodonNetworkError, MastodonReadTimeout, MastodonAPIError, MastodonIllegalArgumentError
-import getpass
-import unidecode
-import fileinput,re
-import os
-import sys
-import os.path
 
 MAX_LENGTH = 490
 
@@ -51,7 +55,13 @@ class Mastobot:
         self._actions       = Config(self._config.get("app.actions_file_name"))
         self._post_disabled = self._config.get("testing.disable_post")
 
+        if "test_file"  in self._config.get("testing"):
+            self._test_file = self._config.get("testing.test_file")
+        else:
+            self._test_file = False
+
         self._logger.debug("post disabled: "    + str(self._post_disabled))
+        self._logger.debug("test file    : "    + str(self._test_file))
 
 
     def init_bot_connection(self):
@@ -338,35 +348,28 @@ class Mastobot:
                 status_id = status["id"] 
 
 
+    def get_notifications(self):
 
-    def process_notif(self, notif, notif_type, keyword):
+        notifications = []
+        
+        if self._test_file:        
+            with open(self._config.get("testing.test_file_name"), encoding='utf-8') as f:
+                for linea in f:
+                    mydict = {}
+                    notif   = yaml.safe_load(linea)
+                    account = SimpleNamespace(acct = notif["acct"])
+                    status  = SimpleNamespace(id = notif["id2"], in_reply_to_id = notif["in_reply_to_id"], visibility = notif["visibility"], language = notif["language"], content = notif["content"])
+                    mydict["id"] = notif["id"]
+                    mydict["type"] = notif["type"]
+                    mydict["account"] = account
+                    mydict["status"] = status
+                    mynam  = SimpleNamespace(**mydict)
+                    notifications.append(mynam)
 
-        self._logger.debug("process notif type: " + notif_type)
-        self._logger.debug("process keyword   : " + keyword)
+        else:
+            notifications = self.mastodon.notifications()          
 
-        replay  = False
-        dismiss = True
-
-        if notif.type == notif_type:
-
-            notif_word_list = self.find_notif_word_list(notif)
-
-            if self._ignore_test and self._test_word.lower() in notif_word_list:
-                self._logger.debug("ignoring test notification id " + str(notif.id))
-                dismiss = False
-            
-            else:
-                if (notif_word_list[0].strip() == self._me) and (keyword.lower() in notif_word_list or keyword == ""):
-                    self._logger.info("replaying notification id " + str(notif.id))                    
-                    replay = True
-
-                    if self._dismiss_disabled:
-                        self._logger.debug("notification replayed but dismiss disabled in id " + str(notif.id))               
-                        dismiss = False    
-                    else:     
-                        self._logger.debug("dismissing notification id " + str(notif.id))              
-                                
-        return replay, dismiss
+        return notifications
 
 
     def check_notif(self, notif, notif_type):
@@ -486,6 +489,3 @@ class Mastobot:
         else:
             self._output_file.add_row(row)
             self._logger.info("output file written")                    
-
-
-
