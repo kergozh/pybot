@@ -20,6 +20,7 @@ import os
 import sys
 import os.path
 
+MAX_LENGTH = 490
 
 class Mastobot:
 
@@ -330,7 +331,7 @@ class Mastobot:
  
                 if add_text != "":
                     text = add_text + text
-                text = (text[:400] + '... ') if len(text) > 400 else text
+                text = (text[:MAX_LENGTH] + '... ') if len(text) > MAX_LENGTH else text
 
                 self._logger.info("posting toot")
                 status = self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
