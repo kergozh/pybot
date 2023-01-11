@@ -59,9 +59,14 @@ class Mastobot:
             self._test_file = self._config.get("testing.test_file")
         else:
             self._test_file = False
+                
+        if self._test_file:
+            self._post_disabled = True
+        else:
+            self._post_disabled = self._config.get("testing.disable_post")
 
-        self._logger.debug("post disabled: "    + str(self._post_disabled))
         self._logger.debug("test file    : "    + str(self._test_file))
+        self._logger.debug("post disabled: "    + str(self._post_disabled))
 
 
     def init_bot_connection(self):
@@ -93,7 +98,11 @@ class Mastobot:
 
     def init_replay_bot(self):
 
-        self._dismiss_disabled = self._config.get("testing.disable_dismiss")
+        if self._test_file:
+            self._dismiss_disabled = True
+        else:
+            self._dismiss_disabled = self._config.get("testing.disable_dismiss")
+
         self._test_word        = self._config.get("testing.text_word").lower()
         ignore_test_toot       = self._config.get("testing.ignore_test_toot")
 
