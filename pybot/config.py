@@ -15,19 +15,25 @@ class Config (Storage):
         super().__init__(filename, "")
         self.read_yaml()
 
+    def get(self, param_name: str = "", default_value: str = "") -> any:
 
-    def get(self, param_name: str = "", default_value: any = None) -> any:
+        found = False
 
         if param_name.find(".") > 0:
             local_config = self._storage
 
             for item in param_name.split("."):
-                if local_config[item]:
+                if item in local_config:
                     local_config = local_config[item]
                 else:
-                    return default_value
+                    found = True
+                    output = default_value
 
-            return local_config
+            if not found: 
+                output = local_config
 
-        return self._storage[param_name] if self._storage[param_name] else default_value
+        else:
+            output = self._storage[param_name] if param_name in self._storage else default_value
+
+        return output
     
