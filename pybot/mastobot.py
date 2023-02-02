@@ -1,8 +1,8 @@
-###
-# Mastobot, clase sobre mastodon.py orientada a hacer bots
-# Fork del original de @spla@mastodont.cat
-# En https://git.mastodont.cat/spla/info
-###  
+""" 
+Mastobot, clase sobre mastodon.py para hacer bots
+Inspirada (pero cada vez más lejos) en el info bot de @spla@mastodont.cat
+En https://git.mastodont.cat/spla/info
+"""  
 
 import logging
 import getpass
@@ -18,55 +18,70 @@ import yaml
 from mastodon import Mastodon
 from mastodon.Mastodon import MastodonMalformedEventError, MastodonNetworkError, MastodonReadTimeout, MastodonAPIError, MastodonIllegalArgumentError
 
-from .logger import Logger
-from .translator import Translator
-from .programmer import Programmer
-from .config import Config
-from .storage import Storage
+from pybot.logger import Logger
+from pybot.translator import Translator
+from pybot.programmer import Programmer
+from pybot.config import Config
+from storage import Storage
 
-MAX_LENGTH = 490
 
 class Mastobot:
 
     def __init__(self, botname):
 
-        self._config     = Config()
-        self._logger     = Logger(self._config).getLogger()
+        self._config = Config()
+        self._logger = Logger(self._config).getLogger()
 
-        self._logger.info("init " + botname)
+        self._logger.info("init %s", botname)
 
         self.init_app_options()
         self.init_bot_connection()
         
         self._me = "@" + self.mastodon.me()["username"].strip()
-        self._logger.debug("me: " + self._me)
+        self._logger.debug("me: %s", self._me)
 
 
     def run(self, botname):
 
-        self._logger.info("end " + botname)
+        self._logger.info("end %s", botname)
 
 
     def init_app_options(self):
 
-        self._hostname      = self._config.get("bot.hostname")   
-        self._access_type   = self._config.get("bot.access_type")  
-
-        self._actions       = Config(self._config.get("app.actions_file_name"))
-        self._post_disabled = self._config.get("testing.disable_post")
-
-        if "test_file"  in self._config.get("testing"):
-            self._test_file = self._config.get("testing.test_file")
+        self._hostname    = self._config.get("bot.hostname")   
+        self._access_type = self._config.get("bot.access_type")  
+        
+        if self._config.exist("app.max_lenght"):
+            self._max_lenght  = self._config.get("app.max_lenght")  
         else:
-            self._test_file = False
-                
-        if self._test_file:
-            self._post_disabled = True
-        else:
-            self._post_disabled = self._config.get("testing.disable_post")
+            self._max_lenght  = 490
 
-        self._logger.debug("test file    : "    + str(self._test_file))
-        self._logger.debug("post disabled: "    + str(self._post_disabled))
+        if self._config.exist("app.actions_file_name"):
+            if self._config.get("app.actions_file_name") != "":
+                self._logger.debug("action file found")
+                self._actions = Config(self._config.get("app.actions_file_name"))
+
+        if self._config.exist("app.data_file_name"):
+            if self._config.get("app.data_file_name") != "":
+                self._logger.debug("data file found")
+                self._data = Config(self._config.get("app.data_file_name"))
+
+        self._test_file = ""
+        if self._config.exist("testing.test_file"):
+            if self._config.get("testing.test_file") != "":
+                self._logger.debug("test file file found")
+                self._test_file = self._config.get("testing.test_file")
+                # Con test file no permitimos hacer post
+                self._post_disabled = True
+
+        if self._test_file == "":
+            if self._config.exist("testing.disable_post"):
+                self._post_disabled = self._config.get("testing.disable_post")
+            else:
+                self._post_disabled = False
+
+        self._logger.debug("max lenght: %s", str(self._max_lenght))
+        self._logger.debug("post disabled: %s", str(self._post_disabled))
 
 
     def init_bot_connection(self):
@@ -78,42 +93,58 @@ class Mastobot:
             self.credential_access()
 
         else:
-            self._logger.error("access type not valid: " + self._access_type)
+            self._logger.error("access type not valid: %s", self._access_type)
             raise RuntimeError
 
 
     def init_publish_bot(self):
 
-        self._user_mention  = self._config.get("testing.user_mention")
-        force_mention       = self._config.get("testing.force_mention")
-
-        self._logger.debug("user_mention: "  + self._user_mention)
-        self._logger.debug("force_mention: " + str(force_mention))
-
-        if self._user_mention != "" and force_mention:
-            self._force_mention = True
+        if self._config.exist("testing.force_mention"):
+            self._force_mention = self._config.get("testing.force_mention")
+            if self._force_mention: 
+                self._user_mention  = self._config.get("testing.user_mention")
         else:
-            self._force_mention = False 
+            self._force_mention = False
+
+        self._logger.debug("force_mention: %s", str(self._force_mention))        
+
+
+    def init_repetition_control(self):
+
+        if self._config.exist("app.working_directory"): 
+            directory = self._config.get("app.working_directory")
+        else:
+            directory = ""
+
+        if self._config.exist("app.control_file_name"): 
+            filename = self._config.get("app.control_file_name")
+        else:
+            filename  = "ctr.csv"
+
+        self._control_file = Storage(filename, directory)
+        self._control_file.read_csv()
 
 
     def init_replay_bot(self):
 
-        if self._test_file:
+        if self._test_file != "":
+            # Con test file no permitimos dismiss (daria error)
             self._dismiss_disabled = True
         else:
-            self._dismiss_disabled = self._config.get("testing.disable_dismiss")
+            if self._config.exist("testing.disable_dismiss"):
+                self._dismiss_disabled = self._config.get("testing.disable_dismiss")
+            else:
+                self._dismiss_disabled = False
 
-        self._test_word        = self._config.get("testing.text_word").lower()
-        ignore_test_toot       = self._config.get("testing.ignore_test_toot")
-
-        self._logger.debug("dismiss disabled: " + str(self._dismiss_disabled))
-        self._logger.debug("test_word: "        + self._test_word)
-        self._logger.debug("ignore test: "      + str(ignore_test_toot))
-
-        if self._test_word != "" and ignore_test_toot:
-            self._ignore_test = True
+        if self._config.exist("testing.ignore_test_toot"):
+            self._ignore_test = self._config.get("testing.ignore_test_toot")
+            if self._ignore_test:  
+                self._test_word = self._config.get("testing.text_word").lower()
         else:
-            self._ignore_test = False 
+            self._ignore_test = False
+
+        self._logger.debug("dismiss disabled: %s", str(self._dismiss_disabled))
+        self._logger.debug("ignore test: %s", str(self._ignore_test))
 
 
     def init_translator(self, default_lenguage : str = "es"):
@@ -123,26 +154,43 @@ class Mastobot:
 
     def init_programmer(self):
 
-        self._programmer = Programmer()
+        if self._config.exist("app.working_directory"): 
+            directory = self._config.get("app.working_directory")
+        else:
+            directory = ""
+
+        if self._config.exist("app.programmer_file_name"): 
+            filename = self._config.get("app.programmer_file_name")
+        else:
+            filename  = "pgm.csv"
+
+        self._programmer = Programmer(filename, directory)
         self._force_programmer = self._config.get("testing.force_programmer")
 
 
     def init_output_file(self):
 
-        directory = self._config.get("app.output_directory")
-        filename  = self._config.get("app.output_file_name")
+        if self._config.exist("app.working_directory"): 
+            directory = self._config.get("app.working_directory")
+        else:
+            directory = ""
+
+        if self._config.exist("app.output_file_name"): 
+            filename = self._config.get("app.output_file_name")
+        else:
+            filename  = "output.csv"
+
         self._output_file = Storage(filename, directory)
-        self._disable_write = self._config.get("testing.disable_write")
-
-
-    def init_input_data(self):
-
-        self._data = Config(self._config.get("app.data_file_name"))
+        
+        if self._config.exist("testing.disable_write"):
+            self._disable_write = self._config.get("testing.disable_write")
+        else:
+            self._disable_write = False
 
 
     def access_token_access(self):
 
-        self._logger.debug("access token access in " + self._hostname)
+        self._logger.debug("access token access in %s", self._hostname)
     
         client_id     = self._config.get("access_token.client_id")
         secret        = self._config.get("access_token.secret")
@@ -152,13 +200,13 @@ class Mastobot:
 
     def credential_access(self):
 
-        self._logger.debug("credential access in " + self._hostname)
+        self._logger.debug("credential access in %s", self._hostname)
 
         force_login       = self._config.get("credentials.force_login")
         secrets_file_path = self._config.get("credentials.secrets_directory") + "/" + self._config.get("credentials.secrets_file_name")
 
-        self._logger.debug("force login      : " + str(force_login))
-        self._logger.debug("secrets file path: " + secrets_file_path)
+        self._logger.debug("force login: %s", str(force_login))
+        self._logger.debug("secrets file path: %s", secrets_file_path)
 
         is_setup = False
 
@@ -196,19 +244,19 @@ class Mastobot:
         file_exits = False
 
         if not os.path.isfile(file_path):
-            self._logger.debug("file " + file_path + " not found, running setup.")
+            self._logger.debug("file %s not found, running setup", file_path)
             return
         else:
-            self._logger.debug("file " + file_path + " found.")
+            self._logger.debug("file %s found", file_path)
             file_exits = True
             return file_exits
 
 
     def log_in(self, client_id, secret, token):
 
-        self._logger.debug("client id: " + client_id)
-        self._logger.debug("secret   : " + secret)
-        self._logger.debug("token    : " + token)
+        self._logger.debug("client id: %s", client_id)
+        self._logger.debug("secret: %s", secret)
+        self._logger.debug("token: %s", token)
 
         self.mastodon = Mastodon(
             client_id = client_id,
@@ -227,7 +275,7 @@ class Mastobot:
                 if line.startswith( parameter ):
                     return line.replace(parameter + ":", "").strip()
 
-        self._logger.error(file_path + " missing parameter " + parameter)
+        self._logger.error("%s missing parameter %s", file_path, parameter)
         raise RuntimeError 
 
 
@@ -269,10 +317,10 @@ class Mastobot:
 
             if not os.path.exists(secrets_file_path):
                 with open(secrets_file_path, 'w'): pass
-                self._logger.info(secrets_file_path + " created!")
+                self._logger.info("%s created!", secrets_file_path)
 
             with open(secrets_file_path, 'a') as the_file:
-                self._logger.info("writing secrets parameter names to " + secrets_file_path)
+                self._logger.info("writing secrets parameter names to %s", secrets_file_path)
                 the_file.write('client_id: \n'+'secret: \n'+'token: \n')
 
             client_path = 'app_clientcred.txt'
@@ -284,11 +332,11 @@ class Mastobot:
 
                 while line:
                     if cnt == 1:
-                        self._logger.info("writing client id to " + secrets_file_path)
+                        self._logger.info("writing client id to %s", secrets_file_path)
                         self.modify_file(secrets_file_path, "client_id: ", value=line.rstrip())
 
                     elif cnt == 2:
-                        self._logger.info("writing secret to " + secrets_file_path)
+                        self._logger.info("writing secret to %s", secrets_file_path)
                         self.modify_file(secrets_file_path, "secret: ", value=line.rstrip())
 
                     line = fp.readline()
@@ -298,7 +346,7 @@ class Mastobot:
 
             with open(token_path) as fp:
                 line = fp.readline()
-                self._logger.info("writing token to " + secrets_file_path)
+                self._logger.info("writing token to %s", secrets_file_path)
                 self.modify_file(secrets_file_path, "token: ", value=line.rstrip())
 
             self.remove_file("app_clientcred.txt")     
@@ -323,6 +371,31 @@ class Mastobot:
             sys.stdout.write(line)
 
         fh.close()
+
+
+    def check_repetition(self, item: str, repetitions): 
+        """ este método valida si el item esta en la lista, y controla que no crezca más allá de repetitions """
+        """ ojo, item debe ser string """
+        
+        self._logger.debug("item: %s", item)  
+        self._logger.debug("repetitions: %s", str(repetitions))  
+
+        item_list = self._control_file._storage
+        self._logger.debug("item list: %s", str(item_list))  
+
+        valid = False if item in item_list else True
+        self._logger.debug("valid: %s", str(valid))  
+
+        if valid:
+            item_list.append(item)
+            if len(item_list) > repetitions:
+                for i in range(len(item_list) - repetitions):
+                    item_list.pop(0)
+
+            self._logger.debug("item list: %s", str(item_list))          
+            self._control_file.write_row(item_list)
+
+        return valid
 
 
     def post_toot(self, text, language): 
@@ -350,7 +423,7 @@ class Mastobot:
  
                 if add_text != "":
                     text = add_text + text
-                text = (text[:MAX_LENGTH] + '... ') if len(text) > MAX_LENGTH else text
+                text = (text[:self._max_lenght] + '... ') if len(text) > self._max_lenght else text
 
                 self._logger.info("posting toot")
                 status = self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
@@ -383,7 +456,7 @@ class Mastobot:
 
     def check_notif(self, notif, notif_type):
 
-        self._logger.debug("process notif type: " + notif_type)
+        self._logger.debug("process notif type: %s", notif_type)
 
         dismiss = True
         content = ""
@@ -398,7 +471,7 @@ class Mastobot:
 
             else:
                 if self._ignore_test and content.find(self._test_word) != -1:
-                    self._logger.debug("ignoring test notification id " + str(notif.id))
+                    self._logger.debug("ignoring test notification id %s", str(notif.id))
                     dismiss = False
                     content = ""            
 
@@ -409,27 +482,27 @@ class Mastobot:
                     content = content.strip()
                     
                     if self._dismiss_disabled:
-                        self._logger.debug("notification replayed but dismiss disabled in id " + str(notif.id))               
+                        self._logger.debug("notification replayed but dismiss disabled for id %s", str(notif.id))               
                         dismiss = False    
 
         if dismiss:
-            self._logger.debug("dismissing notification id " + str(notif.id))              
+            self._logger.debug("dismissing notification id %s", str(notif.id))              
             self.mastodon.notifications_dismiss(notif.id)
 
-        self._logger.debug("content: " + content)
+        self._logger.debug("content: %s", content)
 
         return content
 
 
     def clean_content(self, text):
 
-        self._logger.debug("Original content: " + text)
+        self._logger.debug("Original content: %s", text)
         
         text = self.cleanhtml(text)
         text = self.unescape(text)
         text = text.lower()
             
-        self._logger.debug("Checking content: " + text)
+        self._logger.debug("Checking content: %s", text)
 
         return text 
 
@@ -485,9 +558,19 @@ class Mastobot:
             check = True
         else:
             check = self._programmer.check_time(hours, restore)
-            self._logger.info("checking programmer with " + str(hours) + " resultat " + str(check))                    
+            self._logger.info("checking programmer with %s resultat: %s", str(hours), str(check))                    
 
         return check
+
+
+    def add_output_file (self, row):
+
+        if self._disable_write:
+            self._logger.debug("write output file disabled")                    
+            check = True
+        else:
+            self._output_file.add_row(row)
+            self._logger.info("output file written")                    
 
 
     def write_output_file (self, row):
@@ -496,5 +579,5 @@ class Mastobot:
             self._logger.debug("write output file disabled")                    
             check = True
         else:
-            self._output_file.add_row(row)
+            self._output_file.write_row(row)
             self._logger.info("output file written")                    
