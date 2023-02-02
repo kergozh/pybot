@@ -22,7 +22,7 @@ from pybot.logger import Logger
 from pybot.translator import Translator
 from pybot.programmer import Programmer
 from pybot.config import Config
-from storage import Storage
+from pybot.storage import Storage
 
 
 class Mastobot:
