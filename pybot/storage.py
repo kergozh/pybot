@@ -28,14 +28,14 @@ class Storage:
 
     def read_csv(self) -> None:
     
+        self._storage = []
         if os.path.exists(self._filepath):
             with open(self._filepath, newline = '') as fp:
                 rows = csv.reader(fp)
                 for row in rows:   
                     self._storage.append(row)
-        else:
-            self._storage = []
 
+                    
     def write_row(self, row) -> None:
     
         with open(self._filepath, 'w', newline="") as fp:
