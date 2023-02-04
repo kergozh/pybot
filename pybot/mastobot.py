@@ -66,15 +66,13 @@ class Mastobot:
                 self._logger.debug("data file found")
                 self._data = Config(self._config.get("app.data_file_name"))
 
-        self._test_file = ""
         if self._config.exist("testing.test_file"):
-            if self._config.get("testing.test_file") != "":
-                self._logger.debug("test file file found")
-                self._test_file = self._config.get("testing.test_file")
-                # Con test file no permitimos hacer post
-                self._post_disabled = True
+            self._test_file = self._config.get("testing.test_file"):
+            self._logger.debug("test file file found")
+        else:
+            self._test_file = False
 
-        if self._test_file == "":
+        if self._test_file:
             if self._config.exist("testing.disable_post"):
                 self._post_disabled = self._config.get("testing.disable_post")
             else:
@@ -127,7 +125,7 @@ class Mastobot:
 
     def init_replay_bot(self):
 
-        if self._test_file != "":
+        if self._test_file:
             # Con test file no permitimos dismiss (daria error)
             self._dismiss_disabled = True
         else:
