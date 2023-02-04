@@ -67,7 +67,7 @@ class Mastobot:
                 self._data = Config(self._config.get("app.data_file_name"))
 
         if self._config.exist("testing.test_file"):
-            self._test_file = self._config.get("testing.test_file"):
+            self._test_file = self._config.get("testing.test_file")
             self._logger.debug("test file file found")
         else:
             self._test_file = False
