@@ -1,13 +1,12 @@
-###
-# Clase para gestionar un programador de acciones por horas
-# (seria posible también hacerlo por minutos, haciendo doble pasada sobre las horas,
-# pero de momento no se necesita :-) )
-###  
+"""
+Clase para gestionar un programador (scheduler) de acciones por horas
+(seria posible también hacerlo por minutos, haciendo doble pasada sobre las horas,
+pero de momento no se necesita :-) )
+"""  
 
-from .storage import Storage
+from pybot.storage import Storage
 import os
 import datetime
-import csv
 
 FILENAME = "pgm.csv"
 DIRECTORY = "pgm"
@@ -15,6 +14,12 @@ DIRECTORY = "pgm"
 class Programmer (Storage):
 
     def __init__(self, filename: str = FILENAME, directory: str = DIRECTORY) -> None:
+        """ init method
+
+        Args:
+            filename (str, optional): filename for control file. Defaults to FILENAME.
+            directory (str, optional): directory for control file. Defaults to DIRECTORY.
+        """
 
         self._year = ""
         self._month = ""
@@ -26,17 +31,24 @@ class Programmer (Storage):
         
         if os.path.exists(self._filepath):
             self.read_csv()
-            rows = self._storage
-            for row in rows:
-                if len(row) == 5:
-                    self._year  = row[0]
-                    self._month = row[1]
-                    self._day   = row[2]
-                    self._hour  = row[3]
+            if len(self._storage) == 5:
+                self._year  = self._storage[0]
+                self._month = self._storage[1]
+                self._day   = self._storage[2]
+                self._hour  = self._storage[3]
                               
 
     def check_time(self, hours, restore):
-        
+        """ check if it is time for performing an action
+
+        Args:
+            hours (list): list of hours when the action has to be done
+            restore (bool): do the action if the time has passed
+
+        Returns:
+            bool: True if the action has to be done.
+        """        
+
         check = False
         now = datetime.datetime.now()
         now_year   = now.strftime("%Y")
