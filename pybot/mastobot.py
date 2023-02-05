@@ -4,7 +4,6 @@ Inspirada (pero cada vez más lejos) en el info bot de @spla@mastodont.cat
 En https://git.mastodont.cat/spla/info
 """  
 
-import logging
 import getpass
 import fileinput
 import re
@@ -13,7 +12,6 @@ import sys
 import os.path
 from types import SimpleNamespace
 
-import unidecode
 import yaml
 from mastodon import Mastodon
 from mastodon.Mastodon import MastodonMalformedEventError, MastodonNetworkError, MastodonReadTimeout, MastodonAPIError, MastodonIllegalArgumentError
@@ -73,6 +71,9 @@ class Mastobot:
             self._test_file = False
 
         if self._test_file:
+            # amb test file no permetem post
+            self._post_disabled = True
+        else:
             if self._config.exist("testing.disable_post"):
                 self._post_disabled = self._config.get("testing.disable_post")
             else:
@@ -136,16 +137,19 @@ class Mastobot:
 
         if self._config.exist("testing.ignore_test_toot"):
             self._ignore_test = self._config.get("testing.ignore_test_toot")
-            if self._ignore_test:  
-                self._test_word = self._config.get("testing.text_word").lower()
         else:
             self._ignore_test = False
+
+        if self._config.exist("testing.text_word"):
+            self._test_word = self._config.get("testing.text_word").lower()
+        else:
+            self.test_word = ""
 
         self._logger.debug("dismiss disabled: %s", str(self._dismiss_disabled))
         self._logger.debug("ignore test: %s", str(self._ignore_test))
 
 
-    def init_translator(self, default_lenguage : str = "es"):
+    def init_translator(self, default_lenguage : str = "en"):
 
         self._translator = Translator(default_lenguage)
 
@@ -483,7 +487,8 @@ class Mastobot:
                         self._logger.debug("notification replayed but dismiss disabled for id %s", str(notif.id))               
                         dismiss = False    
 
-        if dismiss:
+        if dismiss and not self._test_file:
+            # Amb test file no es pot fer dismiss perquè els id son ficticis
             self._logger.debug("dismissing notification id %s", str(notif.id))              
             self.mastodon.notifications_dismiss(notif.id)
 
@@ -578,4 +583,4 @@ class Mastobot:
             check = True
         else:
             self._output_file.write_row(row)
-            self._logger.info("output file written")                    
+            self._logger.info("output file written")     
