@@ -86,10 +86,13 @@ class Mastobot:
     def init_bot_connection(self):
 
         if self._access_type ==  'AT': 
-                self.access_token_access()
+            self.access_token_access()
          
         elif self._access_type ==  'CR': 
             self.credential_access()
+
+        elif self._access_type ==  'GA': 
+            self.access_token_access_github_action()
 
         else:
             self._logger.error("access type not valid: %s", self._access_type)
@@ -197,6 +200,16 @@ class Mastobot:
         client_id     = self._config.get("access_token.client_id")
         secret        = self._config.get("access_token.secret")
         token         = self._config.get("access_token.token")
+        self.mastodon = self.log_in(client_id, secret, token)    
+
+
+    def access_token_access_github_action(self):
+
+        self._logger.debug("access token access github action in %s", self._hostname)
+    
+        client_id     = os.environ["MASTO_CLIENT_ID"]
+        secret        = os.environ["MASTO_SECRET"]
+        token         = os.environ["MASTO_TOKEN"]
         self.mastodon = self.log_in(client_id, secret, token)    
 
 
