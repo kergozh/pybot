@@ -443,6 +443,8 @@ class Mastobot:
                 self._logger.info("posting toot")
                 status = self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
                 status_id = status["id"] 
+                if visibility == "public":
+                    visibility == "unlisted"
 
 
     def get_notifications(self):
