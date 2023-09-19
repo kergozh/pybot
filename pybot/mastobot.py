@@ -441,10 +441,13 @@ class Mastobot:
                 text = (text[:self._max_lenght] + '... ') if len(text) > self._max_lenght else text
 
                 self._logger.info("posting toot")
+                self._logger.debug("id        : " + str(status_id))
+                self._logger.debug("visibility: " + visibility)
+
                 status = self.mastodon.status_post(text, in_reply_to_id=status_id, visibility=visibility, language=language)
                 status_id = status["id"] 
                 if visibility == "public":
-                    visibility == "unlisted"
+                    visibility = "unlisted"
 
 
     def get_notifications(self):
