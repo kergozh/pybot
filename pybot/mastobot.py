@@ -478,27 +478,35 @@ class Mastobot:
 
         if notif.type == notif_type:
 
-            content = self.clean_content(notif.status.content)
+            if notif.type == "mention":
+                content = self.clean_content(notif.status.content)
 
-            # sólo si la notificacions va dirigida al bot
-            if content.find(self._me) != 0:
-                content = ""
-
-            else:
-                if self._ignore_test and content.find(self._test_word) != -1:
-                    self._logger.debug("ignoring test notification id %s", str(notif.id))
-                    dismiss = False
-                    content = ""            
+                # sólo si la notificacions va dirigida al bot
+                if content.find(self._me) != 0:
+                    content = ""
 
                 else:
-                    content = self.clean_content(notif.status.content)
-                    content = content.replace(self._me, "")
-                    content = content.replace(self._test_word, "")
-                    content = content.strip()
-                    
-                    if self._dismiss_disabled:
-                        self._logger.debug("notification replayed but dismiss disabled for id %s", str(notif.id))               
-                        dismiss = False    
+                    if self._ignore_test and content.find(self._test_word) != -1:
+                        self._logger.debug("ignoring test notification id %s", str(notif.id))
+                        dismiss = False
+                        content = ""            
+
+                    else:
+                        content = self.clean_content(notif.status.content)
+                        content = content.replace(self._me, "")
+                        content = content.replace(self._test_word, "")
+                        content = content.strip()
+                        
+                        if self._dismiss_disabled:
+                            self._logger.debug("notification replayed but dismiss disabled for id %s", str(notif.id))               
+                            dismiss = False    
+        
+            elif notif_type == "admin.sign_up":
+                content = "found"
+ 
+                if self._dismiss_disabled:
+                    self._logger.debug("notification replayed but dismiss disabled for id %s", str(notif.id))               
+                    dismiss = False     
 
         if dismiss and not self._test_file:
             # Amb test file no es pot fer dismiss perquè els id son ficticis
